@@ -4,42 +4,32 @@ import pyttsx3
 import ZMusicLibrary  # Ensure this module is correctly set up with your music library
 import requests
 from openai import OpenAI
-from gtts import gTTS
-import pygame
 import os
 
+# Initialize speech recognizer and TTS engine
 recognizer = sr.Recognizer()
 engine = pyttsx3.init()
-newsapi = "<Your Key Here>"
+
+# Define the API key for NewsAPI
+newsapi_key = "<Your Key Here>"
 
 def speak(text):
-    tts = gTTS(text)
-    tts.save('temp.mp3')
-
-    pygame.mixer.init()
-    pygame.mixer.music.load('temp.mp3')
-    pygame.mixer.music.play()
-
-    while pygame.mixer.music.get_busy():
-        pygame.time.Clock().tick(10)
-
-    pygame.mixer.music.unload()
-    os.remove('temp.mp3')
+    """Use pyttsx3 to convert text to speech"""
+    engine.say(text)
+    engine.runAndWait()
 
 def aiProcess(command):
+    """Process the command using OpenAI's GPT-3.5-turbo model"""
     client = OpenAI(api_key="<Your Key Here>")
-
-    completion = client.chat.completions.create(
+    completion = client.Completion.create(
         model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "You are a virtual assistant named Jarvis skilled in general tasks like Alexa and Google Cloud. Give short responses please"},
-            {"role": "user", "content": command}
-        ]
+        prompt=f"You are a virtual assistant named Jarvis skilled in general tasks like Alexa and Google Cloud. Give short responses please.\nUser: {command}\nJarvis:",
+        max_tokens=50
     )
-
-    return completion.choices[0].message['content']
+    return completion.choices[0].text.strip()
 
 def processCommand(c):
+    """Process the given command and execute the corresponding action"""
     if "open google" in c.lower():
         webbrowser.open("https://google.com")
     elif "open facebook" in c.lower():
@@ -48,6 +38,16 @@ def processCommand(c):
         webbrowser.open("https://youtube.com")
     elif "open linkedin" in c.lower():
         webbrowser.open("https://linkedin.com")
+    elif "open instagram" in c.lower():
+        webbrowser.open("https://instagram.com")
+    elif "open twitter" in c.lower():
+        webbrowser.open("https://twitter.com")
+    elif "open github" in c.lower():
+        webbrowser.open("https://github.com")
+    elif "open snapchat" in c.lower():
+        webbrowser.open("https://snapchat.com")
+    elif "open email" in c.lower():
+        webbrowser.open("https://mail.google.com")
     elif c.lower().startswith("play"):
         song = c.lower().split(" ", 1)[1]
         link = ZMusicLibrary.music.get(song)
@@ -56,7 +56,7 @@ def processCommand(c):
         else:
             speak("Song not found in the library")
     elif "news" in c.lower():
-        r = requests.get(f"https://newsapi.org/v2/top-headlines?country=in&apiKey={newsapi}")
+        r = requests.get(f"https://newsapi.org/v2/top-headlines?country=in&apiKey={newsapi_key}")
         if r.status_code == 200:
             data = r.json()
             articles = data.get('articles', [])
@@ -71,19 +71,19 @@ def processCommand(c):
 if __name__ == "__main__":
     speak("Initializing Jarvis....")
     while True:
-        print("recognizing...")
         try:
             with sr.Microphone() as source:
+                recognizer.adjust_for_ambient_noise(source)
                 print("Listening for 'Jarvis'...")
                 audio = recognizer.listen(source, timeout=2, phrase_time_limit=1)
-            word = recognizer.recognize_google(audio)
-            if word.lower() == "jarvis":
-                speak("Yes?")
-                with sr.Microphone() as source:
-                    print("Jarvis Active, listening for command...")
-                    audio = recognizer.listen(source)
-                    command = recognizer.recognize_google(audio)
-                    processCommand(command)
+                word = recognizer.recognize_google(audio)
+                if word.lower() == "jarvis":
+                    speak("Yes?")
+                    with sr.Microphone() as source:
+                        print("Jarvis Active, listening for command...")
+                        audio = recognizer.listen(source)
+                        command = recognizer.recognize_google(audio)
+                        processCommand(command)
         except sr.WaitTimeoutError:
             print("Listening timed out while waiting for phrase to start")
         except sr.UnknownValueError:
